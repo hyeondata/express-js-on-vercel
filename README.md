@@ -73,3 +73,17 @@ npm run start
 - `Cannot find module .../src/index.ts`: 빌드 루트/경로 불일치
 - `EACCES`/권한 오류: 런타임 저장 경로(`/tmp`) 사용 여부 점검
 - `Function crashed`/`Unhandled`: `npm run start`로 동일 요청을 재현해 오류 로그 확인
+
+### 배포 전 점검
+
+```bash
+npm run start
+```
+
+새 터미널에서:
+
+```bash
+npm run deploy:check
+```
+
+`deploy:check`는 health/accounts/cards/study/share 모드 기본 동작을 순차로 검증합니다.

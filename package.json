@@ -15,6 +15,7 @@
   },
   "scripts": {
     "start": "node --experimental-strip-types scripts/run-local.mjs",
+    "deploy:check": "node scripts/deploy-check.mjs",
     "mcp:flashcard": "node scripts/mcp-flashcard-server.mjs",
     "debug:flashcard": "node scripts/debug-flashcard.mjs",
     "debug:flashcard:mcp": "node scripts/debug-flashcard.mjs mcp",
