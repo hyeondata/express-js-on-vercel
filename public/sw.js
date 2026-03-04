@@ -1,7 +1,7 @@
-const CACHE_NAME = 'quokka-flash-pal-v1'
+const CACHE_NAME = 'quokka-words-v1'
 const OFFLINE_PAGE = '/offline.html'
 
-const SHELL_ASSETS = ['/', '/style.css', '/app.js', '/logo.png', '/offline.html']
+const SHELL_ASSETS = ['/', '/style.css', '/app.js', '/offline.html']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

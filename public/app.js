@@ -1,1055 +1,828 @@
-let cards = []
-let currentCardId = null
-let answerRevealed = false
-let quizCurrentCardId = null
-let quizModeActive = false
-let quizCorrect = 0
-let quizTotal = 0
-let accountId = localStorage.getItem('flash-account-id') || ''
-let accountInfo = null
-let difficultyReady = false
-const shareModeAccount = normalizeAccountId(
-  new URLSearchParams(window.location.search).get('shareAccount') ||
-    new URLSearchParams(window.location.search).get('share'),
-)
-let shareMode = Boolean(shareModeAccount)
+/* ===== QuokkaWords — Main App ===== */
 
-const statsWrap = document.getElementById('stats')
-const form = document.getElementById('card-form')
-const frontInput = document.getElementById('front')
-const backInput = document.getElementById('back')
-const topicInput = document.getElementById('topic')
-const clearBtn = document.getElementById('clear')
-const searchInput = document.getElementById('search')
-const topicFilter = document.getElementById('topic-filter')
-const cardList = document.getElementById('card-list')
-const flashTopic = document.getElementById('flashTopic')
-const flashText = document.getElementById('flashText')
-const flashAnswer = document.getElementById('flashAnswer')
-const studyMessage = document.getElementById('study-message')
-const nextCardBtn = document.getElementById('next-card')
-const revealBtn = document.getElementById('reveal')
-const gradeButtons = document.querySelectorAll('[data-result]')
-const exportBtn = document.getElementById('export')
-const importInput = document.getElementById('import-file')
+// ── Constants ──
 
-const createAccountBtn = document.getElementById('create-account')
-const newAccountName = document.getElementById('new-account-name')
-const accountSelect = document.getElementById('account-select')
-const setAccountBtn = document.getElementById('set-account')
-const accountInfoLabel = document.getElementById('account-info')
-const difficultyCorrectInput = document.getElementById('difficulty-correct')
-const difficultyTotalInput = document.getElementById('difficulty-total')
-const applyDifficultyBtn = document.getElementById('apply-difficulty')
-const difficultyInfo = document.getElementById('difficulty-info')
-const difficultyWarningBanner = document.getElementById('difficulty-ready-banner')
-const shareModeInfo = document.getElementById('share-mode-info')
-const shareLinkInput = document.getElementById('share-link')
-const createShareLinkBtn = document.getElementById('create-share-link')
-const copyShareLinkBtn = document.getElementById('copy-share-link')
-const studyArea = document.querySelector('.study-area')
-const quizModeSelect = document.getElementById('quiz-mode')
-const quizStartBtn = document.getElementById('start-quiz')
-const quizQuestion = document.getElementById('quiz-question')
-const quizScore = document.getElementById('quiz-score')
-const quizChoiceWrap = document.getElementById('quiz-choice-wrap')
-const quizAnswerInput = document.getElementById('quiz-answer')
-const quizSubmitBtn = document.getElementById('submit-quiz-answer')
-const quizNextBtn = document.getElementById('next-quiz-question')
-const quizMessage = document.getElementById('quiz-message')
-const connectivityStatus = document.getElementById('connectivity-status')
+const SEED_DECKS = [
+  { id: 'basic-300', name: '기초 300', emoji: '📚', description: '필수 기초 영단어' },
+  { id: 'toeic', name: '토익 빈출', emoji: '📝', description: '토익 시험 빈출 단어' },
+  { id: 'business', name: '비즈니스 영어', emoji: '💼', description: '비즈니스 필수 영단어' },
+];
 
-function request(path, options = {}, includeAccount = true) {
-  const headers = new Headers(options.headers || {})
-  if (options.body && typeof options.body === 'string' && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
-  }
-  if (includeAccount && accountId) {
-    headers.set('X-Account-Id', accountId)
-  }
-  if (shareMode) {
-    headers.set('X-Share-Mode', '1')
-  }
-  return fetch(path, { ...options, headers })
+const SEED_CARDS = [
+  { deckId: 'basic-300', english: 'abandon', koreanMeaning: '버리다', koreanExplanation: '무언가를 포기하다.', example: 'He abandoned the project.', exampleKorean: '그는 프로젝트를 포기했다.' },
+  { deckId: 'basic-300', english: 'abundant', koreanMeaning: '풍부한', koreanExplanation: '매우 많고 충분한.', example: 'The region has abundant resources.', exampleKorean: '그 지역은 자원이 풍부하다.' },
+  { deckId: 'basic-300', english: 'acquire', koreanMeaning: '얻다', koreanExplanation: '노력이나 경험으로 획득하다.', example: 'She acquired new skills.', exampleKorean: '그녀는 새로운 기술을 습득했다.' },
+  { deckId: 'basic-300', english: 'adequate', koreanMeaning: '충분한', koreanExplanation: '필요한 조건을 만족하는.', example: 'The supply is adequate.', exampleKorean: '공급이 충분하다.' },
+  { deckId: 'basic-300', english: 'adverse', koreanMeaning: '불리한', koreanExplanation: '상황이 나쁜.', example: 'Adverse weather delayed the flight.', exampleKorean: '악천후로 비행기가 지연됐다.' },
+  { deckId: 'basic-300', english: 'anticipate', koreanMeaning: '예상하다', koreanExplanation: '미리 예측하다.', example: 'We anticipate strong sales.', exampleKorean: '우리는 강한 매출을 예상한다.' },
+  { deckId: 'basic-300', english: 'brief', koreanMeaning: '간단한', koreanExplanation: '짧고 핵심적인.', example: 'He gave a brief summary.', exampleKorean: '그는 간단한 요약을 했다.' },
+  { deckId: 'basic-300', english: 'convey', koreanMeaning: '전달하다', koreanExplanation: '의미나 감정을 전하다.', example: 'Words convey meaning.', exampleKorean: '말은 의미를 전달한다.' },
+  { deckId: 'basic-300', english: 'decline', koreanMeaning: '감소하다', koreanExplanation: '줄어들다 또는 거절하다.', example: 'Sales declined last quarter.', exampleKorean: '지난 분기 매출이 감소했다.' },
+  { deckId: 'basic-300', english: 'despite', koreanMeaning: '~에도 불구하고', koreanExplanation: '반대 상황에서도.', example: 'Despite the rain, we went out.', exampleKorean: '비에도 불구하고 우리는 외출했다.' },
+];
+
+const QUOKKA_MESSAGES = {
+  default: ['안녕! 오늘도 같이 공부하자!', '오늘은 뭘 배워볼까?', '화이팅! 같이 해보자!'],
+  correct: ['역시 넌 최고야!', '완벽해!', '대단해! 잘했어!', '멋지다!'],
+  unknown: ['괜찮아, 다시 해보자!', '조금만 더 힘내!', '다음엔 꼭!', '천천히 해도 괜찮아!'],
+  streak: ['와! 연속 정답이야!', '불타오르고 있어! 🔥', '멈출 수 없는 기세!'],
+  gameCorrect: ['정답! 대단해!', '맞았어! 최고!', '역시!'],
+  gameWrong: ['아쉽다! 다음엔 맞출 수 있어!', '괜찮아, 실수해도 돼!'],
+};
+
+const LS = {
+  cards: 'qw-cards',
+  states: 'qw-card-states',
+  decks: 'qw-decks',
+  child: 'qw-child',
+  gameHistory: 'qw-game-history',
+};
+
+// ── Quokka SVG ──
+
+function quokkaSVG(size = 120) {
+  const s = size;
+  const cx = s / 2, cy = s / 2;
+  const bodyR = s * 0.38;
+  const faceR = s * 0.28;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg">
+    <!-- ears -->
+    <ellipse cx="${cx - bodyR * 0.55}" cy="${cy - bodyR * 0.7}" rx="${s * 0.09}" ry="${s * 0.13}" fill="#B8845A" transform="rotate(-15 ${cx - bodyR * 0.55} ${cy - bodyR * 0.7})"/>
+    <ellipse cx="${cx + bodyR * 0.55}" cy="${cy - bodyR * 0.7}" rx="${s * 0.09}" ry="${s * 0.13}" fill="#B8845A" transform="rotate(15 ${cx + bodyR * 0.55} ${cy - bodyR * 0.7})"/>
+    <ellipse cx="${cx - bodyR * 0.55}" cy="${cy - bodyR * 0.7}" rx="${s * 0.055}" ry="${s * 0.085}" fill="#E8C9A0" transform="rotate(-15 ${cx - bodyR * 0.55} ${cy - bodyR * 0.7})"/>
+    <ellipse cx="${cx + bodyR * 0.55}" cy="${cy - bodyR * 0.7}" rx="${s * 0.055}" ry="${s * 0.085}" fill="#E8C9A0" transform="rotate(15 ${cx + bodyR * 0.55} ${cy - bodyR * 0.7})"/>
+    <!-- body -->
+    <circle cx="${cx}" cy="${cy + s * 0.05}" r="${bodyR}" fill="#C4956A"/>
+    <!-- face -->
+    <circle cx="${cx}" cy="${cy - s * 0.02}" r="${faceR}" fill="#F0DFC0"/>
+    <!-- eyes -->
+    <circle cx="${cx - s * 0.08}" cy="${cy - s * 0.07}" r="${s * 0.04}" fill="#2D2D2D"/>
+    <circle cx="${cx + s * 0.08}" cy="${cy - s * 0.07}" r="${s * 0.04}" fill="#2D2D2D"/>
+    <circle cx="${cx - s * 0.065}" cy="${cy - s * 0.085}" r="${s * 0.015}" fill="#FFFFFF"/>
+    <circle cx="${cx + s * 0.095}" cy="${cy - s * 0.085}" r="${s * 0.015}" fill="#FFFFFF"/>
+    <!-- nose -->
+    <ellipse cx="${cx}" cy="${cy + s * 0.02}" rx="${s * 0.035}" ry="${s * 0.025}" fill="#A0694B"/>
+    <!-- mouth -->
+    <path d="M${cx - s * 0.05} ${cy + s * 0.06} Q${cx} ${cy + s * 0.11} ${cx + s * 0.05} ${cy + s * 0.06}" stroke="#A0694B" stroke-width="${s * 0.018}" fill="none" stroke-linecap="round"/>
+    <!-- cheeks -->
+    <circle cx="${cx - s * 0.14}" cy="${cy + s * 0.03}" r="${s * 0.04}" fill="#FFBBA8" opacity="0.5"/>
+    <circle cx="${cx + s * 0.14}" cy="${cy + s * 0.03}" r="${s * 0.04}" fill="#FFBBA8" opacity="0.5"/>
+  </svg>`;
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
+// ── State ──
+
+const state = {
+  decks: [],
+  cards: [],
+  cardStates: {},
+  child: null,
+  currentDeckId: null,
+  studySet: [],
+  studyIndex: 0,
+  streak: 0,
+  isFlipped: false,
+  searchQuery: '',
+  filterMode: 'all',
+  // game
+  gameQuestions: [],
+  gameIndex: 0,
+  gameCorrect: 0,
+  gameHistory: [],
+};
+
+function uid() {
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-function normalizeAccountId(value) {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-function normalizeAnswer(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-}
-
-function canUseStudyActions() {
-  return Boolean(accountId) && difficultyReady
-}
-
-function isOnlineNow() {
-  return typeof navigator === 'undefined' ? true : navigator.onLine
-}
-
-function renderConnectivityStatus() {
-  if (!connectivityStatus) return
-  const online = isOnlineNow()
-  connectivityStatus.textContent = online ? '온라인: 실시간 동기화 모드' : '오프라인: 네트워크 연결이 없어 일부 기능 비활성'
-  connectivityStatus.classList.toggle('is-offline', !online)
-}
-
-function setOfflineSafeDisabled(state = true) {
-  const online = isOnlineNow()
-  const disabled = state ? !online : false
-  if (createAccountBtn) createAccountBtn.disabled = disabled
-  if (newAccountName) newAccountName.disabled = disabled
-  if (accountSelect) accountSelect.disabled = disabled
-  if (setAccountBtn) setAccountBtn.disabled = disabled
-  if (difficultyCorrectInput) difficultyCorrectInput.disabled = disabled
-  if (difficultyTotalInput) difficultyTotalInput.disabled = disabled
-  if (applyDifficultyBtn) applyDifficultyBtn.disabled = disabled
-  if (quizStartBtn) quizStartBtn.disabled = disabled
-  if (quizSubmitBtn) quizSubmitBtn.disabled = disabled
-  if (quizNextBtn) quizNextBtn.disabled = disabled
-  if (quizModeSelect) quizModeSelect.disabled = disabled
-  if (quizAnswerInput) quizAnswerInput.disabled = disabled
-  if (nextCardBtn) nextCardBtn.disabled = disabled
-  if (revealBtn) revealBtn.disabled = disabled
-  if (exportBtn) exportBtn.disabled = disabled
-  if (importInput) importInput.disabled = disabled
-  if (form) {
-    form.querySelectorAll('input,button').forEach((element) => {
-      element.disabled = disabled
-    })
-  }
-  gradeButtons.forEach((button) => {
-    button.disabled = disabled
-  })
-  if (!isOnlineNow() && quizChoiceWrap) {
-    hideQuizChoiceMode()
-  }
-  if (quizModeActive && !isOnlineNow()) {
-    quizModeActive = false
-  }
-  if (!isOnlineNow() && quizMessage) {
-    quizMessage.textContent = '오프라인 상태에서는 퀴즈/학습 채점 기능이 일시적으로 비활성입니다.'
-  }
-}
-
-function getRandomCardCandidate() {
-  if (cards.length === 0) return null
-  return cards[Math.floor(Math.random() * cards.length)]
-}
-
-function encodeQuizChoice(value) {
-  return encodeURIComponent(String(value || '').trim())
-}
-
-function decodeQuizChoice(value) {
+function loadState() {
   try {
-    return decodeURIComponent(value || '')
-  } catch {
-    return ''
-  }
-}
-
-function hideQuizChoiceMode() {
-  if (!quizChoiceWrap) return
-  quizChoiceWrap.classList.add('hidden')
-  quizChoiceWrap.innerHTML = ''
-}
-
-function setupQuizTextMode() {
-  if (quizAnswerInput) {
-    quizAnswerInput.value = ''
-    quizAnswerInput.disabled = false
-  }
-  if (quizSubmitBtn) quizSubmitBtn.disabled = false
-}
-
-function setupQuizChoiceMode() {
-  if (quizAnswerInput) quizAnswerInput.disabled = true
-  if (quizSubmitBtn) quizSubmitBtn.disabled = true
-}
-
-function renderQuizQuestion(card) {
-  if (!card) {
-    quizModeActive = false
-    quizQuestion.textContent = '현재 출제 가능한 문제가 없습니다.'
-    quizNextBtn.disabled = true
-    quizSubmitBtn.disabled = true
-    quizAnswerInput.disabled = true
-    if (!cards.length) {
-      showQuizLockedMessage()
+    const raw = localStorage.getItem(LS.decks);
+    state.decks = raw ? JSON.parse(raw) : [];
+    if (state.decks.length === 0) {
+      state.decks = SEED_DECKS.map(d => ({ ...d }));
+      saveTo(LS.decks, state.decks);
     }
-    return
-  }
-
-  quizCurrentCardId = card.id
-  quizQuestion.textContent = card.front
-  quizScore.textContent = `정답: ${quizCorrect} / ${quizTotal}`
-  quizMessage.textContent = '정답을 제출해주세요.'
-  quizNextBtn.disabled = true
-
-  const mode = quizModeSelect ? quizModeSelect.value : 'text'
-  if (mode === 'choice') {
-    const correct = card.back
-    const normalizedCorrect = normalizeAnswer(correct)
-    const wrongPool = cards
-      .filter((item) => item.id !== card.id)
-      .map((item) => item.back)
-      .filter((item) => normalizeAnswer(item) && normalizeAnswer(item) !== normalizedCorrect)
-
-    const normalizedSet = new Set([normalizedCorrect])
-    const candidateWrong = []
-    while (candidateWrong.length < 3 && wrongPool.length > 0) {
-      const randomIndex = Math.floor(Math.random() * wrongPool.length)
-      const picked = wrongPool.splice(randomIndex, 1)[0]
-      const normalizedPicked = normalizeAnswer(picked)
-      if (!normalizedSet.has(normalizedPicked)) {
-        candidateWrong.push(picked)
-        normalizedSet.add(normalizedPicked)
-      }
-    }
-
-    const options = [correct, ...candidateWrong]
-    while (options.length < 4) {
-      options.push(correct)
-    }
-
-    const shuffled = options.sort(() => Math.random() - 0.5)
-
-    setupQuizChoiceMode()
-    quizChoiceWrap.classList.remove('hidden')
-    quizChoiceWrap.innerHTML = shuffled
-      .map(
-        (option) =>
-          `<button class="secondary quiz-choice-btn" type="button" data-choice="${encodeQuizChoice(option)}">${escapeHtml(
-            option,
-          )}</button>`,
-      )
-      .join('')
-  } else {
-    hideQuizChoiceMode()
-    setupQuizTextMode()
-  }
-}
-
-function showQuizLockedMessage() {
-  if (!quizMessage) return
-  if (!accountId) {
-    quizMessage.textContent = '퀴즈 시작/진행은 계정을 먼저 선택해 주세요.'
-    return
-  }
-  if (!difficultyReady) {
-    quizMessage.textContent = '퀴즈 시작/진행은 난이도 측정 이후에만 가능합니다.'
-    return
-  }
-  if (!cards.length) {
-    quizMessage.textContent = '카드가 없습니다. 먼저 카드를 추가해주세요.'
-    return
-  }
-  quizMessage.textContent = '퀴즈를 진행할 수 있습니다.'
-}
-
-function finishQuizAnswer(resultText, isCorrect, card) {
-  quizTotal += 1
-  if (isCorrect) quizCorrect += 1
-  quizMessage.textContent = resultText
-  quizScore.textContent = `정답: ${quizCorrect} / ${quizTotal}`
-
-  request(`/api/cards/${card.id}/review`, {
-    method: 'POST',
-    body: JSON.stringify({ result: isCorrect ? 'good' : 'again' }),
-  })
-    .then((response) => response.json())
-      .then((payload) => {
-        if (payload.error) throw new Error(payload.error)
-        renderStats()
-        loadCards()
-        setTimeout(() => nextQuizCard(), 450)
-      })
-    .catch((error) => {
-      studyMessage.textContent = `퀴즈 채점 실패: ${error.message}`
-    })
-}
-
-function submitTextAnswer() {
-  if (!quizModeActive) {
-    quizMessage.textContent = '퀴즈를 먼저 시작해 주세요.'
-    return
-  }
-  if (!quizModeSelect || quizModeSelect.value !== 'text') {
-    return
-  }
-  const answer = normalizeAnswer(quizAnswerInput.value)
-  const card = cards.find((item) => item.id === quizCurrentCardId)
-  if (!card) {
-    startQuiz()
-    return
-  }
-  if (!answer) {
-    quizMessage.textContent = '정답을 입력해주세요.'
-    return
-  }
-  const expected = normalizeAnswer(card.back)
-  const isCorrect = answer === expected
-  finishQuizAnswer(isCorrect ? '정답입니다.' : `오답입니다. 정답: ${card.back}`, isCorrect, card)
-  quizSubmitBtn.disabled = true
-  quizAnswerInput.disabled = true
-  quizNextBtn.disabled = false
-}
-
-function submitChoiceAnswerByEvent(event) {
-  if (!quizModeActive) {
-    return
-  }
-  const target = event.target
-  if (!(target instanceof HTMLButtonElement)) return
-  const rawValue = target.dataset.choice
-  if (!rawValue) return
-  const selectedValue = decodeQuizChoice(rawValue)
-  submitChoiceAnswer(selectedValue)
-}
-
-function submitChoiceAnswer(selectedValue) {
-  const card = cards.find((item) => item.id === quizCurrentCardId)
-  if (!card) {
-    startQuiz()
-    return
-  }
-  const expected = card.back
-  const isCorrect = normalizeAnswer(selectedValue) === normalizeAnswer(expected)
-  finishQuizAnswer(isCorrect ? '정답입니다.' : `오답입니다. 정답: ${expected}`, isCorrect, card)
-  if (quizChoiceWrap) {
-    const buttons = quizChoiceWrap.querySelectorAll('button[data-choice]')
-    buttons.forEach((button) => {
-      button.disabled = true
-    })
-    hideQuizChoiceMode()
-  }
-  quizNextBtn.disabled = false
-}
-
-function nextQuizCard() {
-  if (!quizModeActive) return
-  if (!canUseStudyActions()) {
-    quizModeActive = false
-    showQuizLockedMessage()
-    return
-  }
-  const selected = getRandomCardCandidate()
-  if (!selected) {
-    renderQuizQuestion(null)
-    return
-  }
-  renderQuizQuestion(selected)
-}
-
-function startQuiz() {
-  if (!canUseStudyActions()) {
-    showQuizLockedMessage()
-    return
-  }
-  if (!cards.length) {
-    showQuizLockedMessage()
-    return
-  }
-  quizModeActive = true
-  quizCorrect = 0
-  quizTotal = 0
-  quizCurrentCardId = null
-  if (quizChoiceWrap) hideQuizChoiceMode()
-  if (quizAnswerInput) {
-    quizAnswerInput.value = ''
-    quizAnswerInput.disabled = quizModeSelect?.value !== 'choice'
-  }
-  if (quizSubmitBtn) quizSubmitBtn.disabled = quizModeSelect?.value !== 'choice'
-  quizScore.textContent = '정답: 0 / 0'
-  quizMessage.textContent = '문제를 생성합니다.'
-  nextQuizCard()
-  quizStartBtn.textContent = '퀴즈 재시작'
-}
-
-function setSharedModeState(enabled) {
-  const readOnlyTargets = [
-    createAccountBtn,
-    newAccountName,
-    accountSelect,
-    setAccountBtn,
-    difficultyCorrectInput,
-    difficultyTotalInput,
-    applyDifficultyBtn,
-    exportBtn,
-    importInput,
-  ]
-  readOnlyTargets.forEach((element) => {
-    if (element) element.disabled = enabled
-  })
-
-  if (form) {
-    form.querySelectorAll('input,button').forEach((element) => {
-      element.disabled = enabled
-    })
-  }
-}
-
-function renderAccountInfo() {
-  if (!accountInfo) {
-    accountInfoLabel.textContent = '현재 계정: 정보를 읽는 중입니다.'
-    difficultyReady = false
-    difficultyWarningBanner.textContent = '현재 계정 정보를 불러오는 중입니다.'
-    applyStudyGate()
-    return
-  }
-  difficultyReady = Boolean(accountInfo.difficultyAssessedAt)
-  accountInfoLabel.textContent = `현재 계정: ${accountInfo.name} (${accountInfo.id})`
-  difficultyInfo.textContent = `현재 계정 난이도: ${accountInfo.difficulty} (${accountInfo.difficultyAssessedAt ? '측정 완료' : '미측정 / 학습 불가'})`
-  difficultyWarningBanner.textContent = difficultyReady
-    ? '난이도 측정 완료: 카드 복습을 시작할 수 있습니다.'
-    : '난이도 미측정 상태입니다. 먼저 난이도를 측정해 주세요.'
-  applyStudyGate()
-}
-
-async function loadAccount(accountIdCandidate, { persist = true } = {}) {
-  const targetId = normalizeAccountId(accountIdCandidate)
-  if (!targetId) return null
+  } catch { state.decks = SEED_DECKS.map(d => ({ ...d })); }
 
   try {
-    const response = await request(`/api/accounts/${targetId}`, {}, false)
-    if (!response.ok) return null
-    const info = await response.json()
-    accountId = info.id
-    accountInfo = info
-    if (persist) {
-      localStorage.setItem('flash-account-id', accountId)
-      accountSelect.value = accountId
+    const raw = localStorage.getItem(LS.cards);
+    state.cards = raw ? JSON.parse(raw) : [];
+    if (state.cards.length === 0) {
+      state.cards = SEED_CARDS.map(c => ({ ...c, id: uid(), createdAt: new Date().toISOString() }));
+      saveTo(LS.cards, state.cards);
     }
-    renderAccountInfo()
-    return info
-  } catch {
-    return null
-  }
-}
-
-async function loadAccountOptions(selectedId = '') {
-  try {
-    const response = await request('/api/accounts', {}, false)
-    if (!response.ok) return []
-    const list = await response.json()
-
-    accountSelect.innerHTML = ''
-    list.forEach((account) => {
-      const option = document.createElement('option')
-      option.value = account.id
-      const assessed = account.difficultyAssessedAt ? ' [측정됨]' : ' [미측정]'
-      option.textContent = `${account.name} (${account.id})${assessed}`
-      accountSelect.appendChild(option)
-    })
-
-    const normalizedSelectedId = normalizeAccountId(selectedId)
-    if (normalizedSelectedId && list.some((item) => item.id === normalizedSelectedId)) {
-      accountSelect.value = normalizedSelectedId
-    }
-
-    return list
-  } catch {
-    return []
-  }
-}
-
-async function ensureAccount() {
-  if (shareMode && shareModeAccount) {
-    const loaded = await loadAccount(shareModeAccount, { persist: false })
-    if (!loaded) {
-      studyMessage.textContent = '공유 계정 정보를 불러오지 못했습니다.'
-      return null
-    }
-    setSharedModeState(true)
-    return loaded
-  }
-
-  const normalizedSavedId = normalizeAccountId(accountId)
-  const accountList = await loadAccountOptions(normalizedSavedId)
-
-  if (accountList.length > 0) {
-    const validSavedId = normalizedSavedId && accountList.some((item) => item.id === normalizedSavedId)
-    const preferredId = validSavedId ? normalizedSavedId : normalizeAccountId(accountList[0]?.id)
-
-    const loaded = await loadAccount(preferredId)
-    if (loaded) return loaded
-  }
+  } catch { state.cards = []; }
 
   try {
-    const response = await request(
-      '/api/accounts',
-      {
-        method: 'POST',
-        body: JSON.stringify({ name: 'Guest' }),
-      },
-      false,
-    )
-    if (!response.ok) {
-      studyMessage.textContent = '기본 계정 생성에 실패했습니다.'
-      return null
-    }
-    const created = await response.json()
-    await loadAccountOptions()
-    return await loadAccount(created.id)
-  } catch {
-    studyMessage.textContent = '기본 계정 생성에 실패했습니다.'
-    return null
-  }
-}
-
-async function createAccount() {
-  const name = newAccountName.value.trim() || 'New User'
-  const response = await request(
-    '/api/accounts',
-    {
-      method: 'POST',
-      body: JSON.stringify({ name }),
-    },
-    false,
-  )
-  if (!response.ok) {
-    studyMessage.textContent = '계정 생성 실패'
-    return
-  }
-
-  const created = await response.json()
-  await loadAccountOptions(created.id)
-  await loadAccount(created.id)
-  newAccountName.value = ''
-  await loadAllData()
-}
-
-async function setAccountFromInput() {
-  const next = accountSelect.value
-  if (!next) {
-    studyMessage.textContent = '계정을 선택하세요.'
-    return
-  }
-
-  const loaded = await loadAccount(next)
-  if (!loaded) {
-    studyMessage.textContent = '해당 계정을 찾을 수 없습니다.'
-    return
-  }
-
-  await loadAllData()
-  studyMessage.textContent = '계정 전환 완료.'
-}
-
-async function applyDifficulty() {
-  if (!accountId) {
-    studyMessage.textContent = '계정이 선택되지 않았습니다.'
-    return
-  }
-
-  const correct = Number(difficultyCorrectInput.value)
-  const total = Number(difficultyTotalInput.value)
-  if (!Number.isInteger(correct) || !Number.isInteger(total) || total <= 0 || correct < 0 || correct > total) {
-    studyMessage.textContent = '난이도 계산 조건: total은 1 이상의 정수, correct는 0~total 사이 정수여야 합니다.'
-    return
-  }
-
-  applyDifficultyBtn.disabled = true
-  studyMessage.textContent = '난이도 측정을 진행합니다...'
+    const raw = localStorage.getItem(LS.states);
+    state.cardStates = raw ? JSON.parse(raw) : {};
+  } catch { state.cardStates = {}; }
 
   try {
-    const response = await request(
-      `/api/accounts/${accountId}/difficulty`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ correct, total }),
-      },
-      false,
-    )
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      studyMessage.textContent = `난이도 측정 실패: ${payload.error || response.statusText}`
-      return
-    }
+    const raw = localStorage.getItem(LS.child);
+    state.child = raw ? JSON.parse(raw) : null;
+  } catch { state.child = null; }
 
-    const payload = await response.json()
-    accountInfo = payload.account
-    await loadAllData()
-    renderAccountInfo()
-    studyMessage.textContent = payload.message || '난이도 측정 완료.'
-  } catch (error) {
-    studyMessage.textContent = `난이도 측정 실패: ${error.message}`
-  } finally {
-    applyDifficultyBtn.disabled = false
-  }
+  try {
+    const raw = localStorage.getItem(LS.gameHistory);
+    state.gameHistory = raw ? JSON.parse(raw) : [];
+  } catch { state.gameHistory = []; }
 }
 
-function renderStats() {
-  request('/api/stats')
-    .then((r) => r.json())
-    .then((s) => {
-      statsWrap.innerHTML = `
-        <div class="pill">전체 카드<strong>${s.total}</strong></div>
-        <div class="pill">복습 진행<strong>${s.reviewed}</strong></div>
-        <div class="pill">복습 가능<strong>${s.dueToday}</strong></div>
-        <div class="pill">정답률<strong>${s.accuracy}%</strong></div>
-        <div class="pill">기본 난이도<strong>${s.difficulty}</strong></div>
-      `
-    })
-    .catch(() => {
-      statsWrap.innerHTML = `<div class="pill">통계를 불러오지 못했습니다</div>`
-    })
+function saveTo(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
 }
 
-function renderCardList() {
-  cardList.innerHTML = ''
-  cards.forEach((card) => {
-    const node = document.createElement('li')
-    node.className = 'card-item'
-    node.innerHTML = `
-      <div class="card-top">
-        <strong>${escapeHtml(card.front)}</strong>
-        <span class="card-meta">${card.topic}</span>
+function saveCards() { saveTo(LS.cards, state.cards); }
+function saveStates() { saveTo(LS.states, state.cardStates); }
+function saveChild() { saveTo(LS.child, state.child); }
+function saveGameHistory() { saveTo(LS.gameHistory, state.gameHistory); }
+
+// ── Screen Navigation ──
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function showChildInfoScreen() {
+  showScreen('screen-child-info');
+  document.getElementById('mascot-main').innerHTML = quokkaSVG(120);
+}
+
+function showDeckScreen() {
+  if (!state.child) { showChildInfoScreen(); return; }
+  showScreen('screen-deck');
+  document.getElementById('mascot-deck').innerHTML = quokkaSVG(100);
+  const greeting = state.child.name + '아, 어떤 덱을 공부할까?';
+  document.getElementById('deck-greeting').textContent = greeting;
+  document.getElementById('speech-deck').textContent = randomMsg(QUOKKA_MESSAGES.default);
+  renderDeckGrid();
+}
+
+function showStudyScreen(deckId) {
+  state.currentDeckId = deckId;
+  state.streak = 0;
+  state.isFlipped = false;
+  state.searchQuery = '';
+  state.filterMode = 'all';
+  showScreen('screen-study');
+  const deck = state.decks.find(d => d.id === deckId);
+  document.getElementById('deck-title').textContent = deck ? `${deck.emoji} ${deck.name}` : '';
+  document.getElementById('streak-counter').textContent = '🔥 0';
+  document.getElementById('search-input').value = '';
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+  hideReaction('quokka-reaction');
+  applyFilters();
+}
+
+function showGameScreen() {
+  if (!state.currentDeckId) return;
+  showScreen('screen-game');
+  const deck = state.decks.find(d => d.id === state.currentDeckId);
+  document.getElementById('game-deck-title').textContent = deck ? `${deck.emoji} 게임` : '게임 학습';
+  document.getElementById('game-complete').style.display = 'none';
+  document.getElementById('game-area').style.display = 'block';
+  hideReaction('game-reaction');
+  initGame();
+}
+
+function showAdminScreen() {
+  showScreen('screen-admin');
+  renderAdminDeckSelect();
+  renderAdminCardList();
+}
+
+function showReportScreen() {
+  showScreen('screen-report');
+  renderReport();
+}
+
+// ── Toast ──
+
+function showToast(message, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = message;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => t.classList.add('toast-exit'), 2500);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Helpers ──
+
+function randomMsg(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function cardsForDeck(deckId) { return state.cards.filter(c => c.deckId === deckId); }
+
+function isMemorized(cardId) { return !!state.cardStates[cardId]?.memorized; }
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Deck Grid ──
+
+function renderDeckGrid() {
+  const grid = document.getElementById('deck-grid');
+  grid.innerHTML = '';
+  state.decks.forEach(deck => {
+    const cards = cardsForDeck(deck.id);
+    const total = cards.length;
+    const memorized = cards.filter(c => isMemorized(c.id)).length;
+    const pct = total > 0 ? Math.round(memorized / total * 100) : 0;
+
+    const el = document.createElement('div');
+    el.className = 'deck-card';
+    el.innerHTML = `
+      <span class="deck-card-emoji">${deck.emoji}</span>
+      <div class="deck-card-info">
+        <div class="deck-card-name">${deck.name}</div>
+        <div class="deck-card-desc">${deck.description}</div>
+        <div class="deck-card-stats">
+          <span>📄 ${total}개</span>
+          <span>✅ ${memorized}개 외움</span>
+        </div>
+        <div class="deck-mini-bar"><div class="deck-mini-bar-fill" style="width:${pct}%"></div></div>
       </div>
-      <div>${escapeHtml(card.back)}</div>
-      <div class="card-meta">복습 ${card.reviewCount}회 / 난이도 ${card.difficulty} / 최근: ${card.lastReviewedAt || '미복습'}</div>
-      ${
-        shareMode
-          ? ''
-          : `<div class="card-actions">
-            <button class="secondary edit" data-id="${card.id}">수정</button>
-            <button class="danger delete" data-id="${card.id}">삭제</button>
-          </div>`
-      }
-    `
-    cardList.appendChild(node)
-  })
+      <span class="deck-card-badge">🦘</span>
+    `;
+    el.addEventListener('click', () => showStudyScreen(deck.id));
+    grid.appendChild(el);
+  });
 }
 
-function loadCards() {
-  if (!accountId) return
-  const q = searchInput.value.trim()
-  const topic = topicFilter.value
-  const params = new URLSearchParams()
-  if (q) params.set('q', q)
-  if (topic) params.set('topic', topic)
+// ── Study Screen ──
 
-  const path = `/api/cards${params.toString() ? `?${params.toString()}` : ''}`
-  request(path)
-    .then((r) => r.json())
-    .then((list) => {
-      cards = list
-      renderCardList()
-    })
-}
-
-function hydrateTopics() {
-  if (!accountId) return
-  request('/api-data')
-    .then((r) => r.json())
-    .then((payload) => {
-      const topics = payload.topics || []
-      const current = topicFilter.value
-      topicFilter.innerHTML = '<option value="">전체 주제</option>'
-      topics.forEach((topic) => {
-        const option = document.createElement('option')
-        option.value = topic
-        option.textContent = topic
-        topicFilter.appendChild(option)
-      })
-      topicFilter.value = current || ''
-    })
-}
-
-function setCurrentCard(card) {
-  if (!card) return
-  currentCardId = card.id
-  answerRevealed = false
-  flashTopic.textContent = `주제: ${card.topic}`
-  flashText.textContent = card.front
-  flashAnswer.textContent = card.back
-  flashAnswer.classList.add('hidden')
-  flashAnswer.classList.add('answer-hidden')
-  flashText.classList.remove('hidden')
-  flashText.classList.remove('answer-hidden')
-  studyMessage.textContent = '답안을 확인한 뒤 점수를 남겨주세요.'
-}
-
-function clearStudyCard() {
-  currentCardId = null
-  flashTopic.textContent = '주제: -'
-  flashText.textContent = '학습 시작 버튼을 눌러보세요.'
-  flashAnswer.textContent = ''
-  flashAnswer.classList.add('hidden')
-  flashAnswer.classList.add('answer-hidden')
-  flashText.classList.remove('hidden')
-  flashText.classList.remove('answer-hidden')
-  answerRevealed = false
-}
-
-function applyStudyGate() {
-  const canStudy = canUseStudyActions() && isOnlineNow()
-  nextCardBtn.disabled = !canStudy
-  revealBtn.disabled = !canStudy
-  if (quizStartBtn) quizStartBtn.disabled = !canStudy
-  if (quizSubmitBtn) quizSubmitBtn.disabled = !canStudy
-  if (quizNextBtn) quizNextBtn.disabled = !canStudy
-  if (quizModeSelect) quizModeSelect.disabled = !canStudy
-  if (quizAnswerInput) quizAnswerInput.disabled = !canStudy
-  if (quizChoiceWrap) quizChoiceWrap.classList.toggle('hidden', !canStudy)
-  gradeButtons.forEach((button) => {
-    button.disabled = !canStudy
-  })
-
-  if (studyArea) {
-    studyArea.classList.toggle('is-ready', canStudy)
+function applyFilters() {
+  let list = cardsForDeck(state.currentDeckId);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    list = list.filter(c =>
+      c.english.toLowerCase().includes(q) ||
+      c.koreanMeaning.includes(q)
+    );
   }
-  setOfflineSafeDisabled()
-  if (!canStudy && quizModeActive) {
-    quizModeActive = false
-    quizCurrentCardId = null
-    if (quizQuestion) quizQuestion.textContent = '퀴즈 시작 버튼을 눌러주세요.'
-    if (quizScore) quizScore.textContent = `정답: ${quizCorrect} / ${quizTotal}`
-    showQuizLockedMessage()
-  } else if (canStudy && quizMessage) {
-    showQuizLockedMessage()
+  if (state.filterMode === 'memorized') {
+    list = list.filter(c => isMemorized(c.id));
+  } else if (state.filterMode === 'unknown') {
+    list = list.filter(c => !isMemorized(c.id));
   }
-  if (!difficultyReady && difficultyWarningBanner) {
-    difficultyWarningBanner.classList.toggle('is-warning', true)
-    return
-  }
-  if (difficultyWarningBanner) {
-    difficultyWarningBanner.classList.toggle('is-warning', false)
-  }
+  state.studySet = list;
+  state.studyIndex = Math.min(state.studyIndex, Math.max(0, list.length - 1));
+  if (list.length === 0) state.studyIndex = 0;
+  renderCurrentCard();
 }
 
-function loadNextCard() {
-  if (!difficultyReady) {
-    studyMessage.textContent = '학습 전에 난이도를 먼저 측정해 주세요.'
-    return
-  }
-  request('/api/study/next')
-    .then((r) => {
-      if (!r.ok) throw new Error('NO_NEXT')
-      return r.json()
-    })
-    .then((card) => {
-      setCurrentCard(card)
-    })
-    .catch(() => {
-      clearStudyCard()
-      studyMessage.textContent = '복습할 카드가 없습니다.'
-    })
-}
+function renderCurrentCard() {
+  const card = state.studySet[state.studyIndex];
+  const fc = document.getElementById('flashcard');
 
-function revealAnswer() {
-  if (!currentCardId) {
-    studyMessage.textContent = '먼저 카드부터 불러주세요.'
-    return
+  if (!card) {
+    fc.style.display = 'none';
+    document.getElementById('progress-text').textContent = '카드가 없습니다';
+    document.getElementById('progress-bar').style.width = '0%';
+    return;
   }
 
-  answerRevealed = !answerRevealed
-  if (answerRevealed) {
-    flashAnswer.classList.remove('hidden')
-    flashAnswer.classList.remove('answer-hidden')
-    flashText.classList.add('hidden')
-    flashText.classList.add('answer-hidden')
-    studyMessage.textContent = '평가 버튼을 눌러 점수를 입력하세요.'
+  fc.style.display = 'block';
+  fc.classList.remove('flipped');
+  state.isFlipped = false;
+
+  document.getElementById('card-english').textContent = card.english;
+  document.getElementById('card-korean-meaning').textContent = card.koreanMeaning;
+  document.getElementById('card-korean-explanation').textContent = card.koreanExplanation || '';
+  document.getElementById('card-example').textContent = card.example ? `"${card.example}"` : '';
+  document.getElementById('card-example-korean').textContent = card.exampleKorean || '';
+
+  const total = state.studySet.length;
+  const idx = state.studyIndex + 1;
+  document.getElementById('progress-text').textContent = `${idx} / ${total}`;
+  document.getElementById('progress-bar').style.width = `${(idx / total) * 100}%`;
+}
+
+function flipCard() {
+  if (state.studySet.length === 0) return;
+  state.isFlipped = !state.isFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped', state.isFlipped);
+}
+
+function nextCard() {
+  if (state.studySet.length === 0) return;
+  state.studyIndex = (state.studyIndex + 1) % state.studySet.length;
+  renderCurrentCard();
+  hideReaction('quokka-reaction');
+}
+
+function prevCard() {
+  if (state.studySet.length === 0) return;
+  state.studyIndex = (state.studyIndex - 1 + state.studySet.length) % state.studySet.length;
+  renderCurrentCard();
+  hideReaction('quokka-reaction');
+}
+
+function randomCard() {
+  if (state.studySet.length <= 1) return;
+  let idx;
+  do { idx = Math.floor(Math.random() * state.studySet.length); } while (idx === state.studyIndex);
+  state.studyIndex = idx;
+  renderCurrentCard();
+  hideReaction('quokka-reaction');
+}
+
+function markMemorized() {
+  const card = state.studySet[state.studyIndex];
+  if (!card) return;
+  state.cardStates[card.id] = { memorized: true };
+  saveStates();
+  state.streak++;
+  updateStreak();
+  showReaction('quokka-reaction', 'reaction-mascot', 'reaction-bubble', 'correct');
+  if (state.streak > 0 && state.streak % 5 === 0) {
+    showReaction('quokka-reaction', 'reaction-mascot', 'reaction-bubble', 'streak');
+    launchConfetti();
+  }
+  setTimeout(() => nextCard(), 900);
+}
+
+function markUnknown() {
+  const card = state.studySet[state.studyIndex];
+  if (!card) return;
+  state.cardStates[card.id] = { memorized: false };
+  saveStates();
+  state.streak = 0;
+  updateStreak();
+  showReaction('quokka-reaction', 'reaction-mascot', 'reaction-bubble', 'unknown');
+  setTimeout(() => nextCard(), 900);
+}
+
+function updateStreak() {
+  const el = document.getElementById('streak-counter');
+  el.textContent = `🔥 ${state.streak}`;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+// ── Reactions ──
+
+function showReaction(containerId, mascotId, bubbleId, type) {
+  const container = document.getElementById(containerId);
+  const mascot = document.getElementById(mascotId);
+  const bubble = document.getElementById(bubbleId);
+  mascot.innerHTML = quokkaSVG(50);
+  const msgs = QUOKKA_MESSAGES[type] || QUOKKA_MESSAGES.correct;
+  bubble.textContent = randomMsg(msgs);
+  container.classList.add('visible');
+}
+
+function hideReaction(containerId) {
+  document.getElementById(containerId).classList.remove('visible');
+}
+
+// ── Confetti ──
+
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = ['#FF6B4A', '#7ECEC1', '#FF8A6B', '#87CEEB', '#FFD93D', '#6BCB77'];
+  const particles = Array.from({ length: 60 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height * 0.3 - canvas.height * 0.1,
+    w: Math.random() * 8 + 4,
+    h: Math.random() * 6 + 3,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    vx: (Math.random() - 0.5) * 4,
+    vy: Math.random() * 3 + 2,
+    rot: Math.random() * 360,
+    vr: (Math.random() - 0.5) * 10,
+    opacity: 1,
+  }));
+
+  let frame = 0;
+  const maxFrames = 120;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.rot += p.vr;
+      p.opacity = Math.max(0, 1 - frame / maxFrames);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < maxFrames) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ── Game (Quiz) ──
+
+function initGame() {
+  const deckCards = cardsForDeck(state.currentDeckId);
+  if (deckCards.length < 2) {
+    document.getElementById('game-area').innerHTML =
+      '<div class="study-empty"><div class="empty-emoji">😅</div><p>카드가 2개 이상 필요해요!</p></div>';
+    return;
+  }
+
+  const shuffled = [...deckCards].sort(() => Math.random() - 0.5);
+  const count = Math.min(shuffled.length, 10);
+  state.gameQuestions = shuffled.slice(0, count).map(card => {
+    const wrongPool = deckCards.filter(c => c.id !== card.id);
+    const wrongOptions = wrongPool.sort(() => Math.random() - 0.5).slice(0, 3).map(c => c.koreanMeaning);
+    const options = [card.koreanMeaning, ...wrongOptions].sort(() => Math.random() - 0.5);
+    return { card, options, answered: false, correct: false };
+  });
+  state.gameIndex = 0;
+  state.gameCorrect = 0;
+
+  updateGameProgress();
+  renderGameQuestion();
+}
+
+function updateGameProgress() {
+  const total = state.gameQuestions.length;
+  const idx = state.gameIndex + 1;
+  document.getElementById('game-progress-text').textContent = `${idx} / ${total}`;
+  document.getElementById('game-progress-bar').style.width = `${(idx / total) * 100}%`;
+  document.getElementById('game-score').textContent = `${state.gameCorrect} 정답`;
+}
+
+function renderGameQuestion() {
+  const q = state.gameQuestions[state.gameIndex];
+  if (!q) return;
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div style="text-align:center;padding:30px 10px">
+      <p style="font-size:.85rem;color:var(--text-light);margin-bottom:8px">이 단어의 뜻은?</p>
+      <p style="font-family:'Poppins',sans-serif;font-size:2.2rem;font-weight:700;margin-bottom:24px">${q.card.english}</p>
+      <div id="game-options" style="display:flex;flex-direction:column;gap:10px;max-width:400px;margin:0 auto"></div>
+    </div>
+  `;
+  const optionsEl = document.getElementById('game-options');
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn';
+    btn.style.width = '100%';
+    btn.style.padding = '14px';
+    btn.style.fontSize = '1rem';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => handleGameAnswer(opt, q));
+    optionsEl.appendChild(btn);
+  });
+}
+
+function handleGameAnswer(selected, q) {
+  if (q.answered) return;
+  q.answered = true;
+  const isCorrect = selected === q.card.koreanMeaning;
+  q.correct = isCorrect;
+
+  if (isCorrect) {
+    state.gameCorrect++;
+    showReaction('game-reaction', 'game-reaction-mascot', 'game-reaction-bubble', 'gameCorrect');
   } else {
-    flashText.classList.remove('hidden')
-    flashText.classList.remove('answer-hidden')
-    flashAnswer.classList.add('hidden')
-    flashAnswer.classList.add('answer-hidden')
-    studyMessage.textContent = '답안을 확인한 뒤 점수를 남겨주세요.'
+    showReaction('game-reaction', 'game-reaction-mascot', 'game-reaction-bubble', 'gameWrong');
+  }
+  updateGameProgress();
+
+  // Highlight buttons
+  const btns = document.querySelectorAll('#game-options .nav-btn');
+  btns.forEach(btn => {
+    btn.style.pointerEvents = 'none';
+    if (btn.textContent === q.card.koreanMeaning) {
+      btn.style.background = 'linear-gradient(135deg,#6BCB77,#4ECDC4)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#6BCB77';
+    } else if (btn.textContent === selected && !isCorrect) {
+      btn.style.background = 'linear-gradient(135deg,#FF6B6B,#FF8A6B)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#FF6B6B';
+    }
+  });
+
+  setTimeout(() => {
+    state.gameIndex++;
+    hideReaction('game-reaction');
+    if (state.gameIndex < state.gameQuestions.length) {
+      updateGameProgress();
+      renderGameQuestion();
+    } else {
+      finishGame();
+    }
+  }, 1200);
+}
+
+function finishGame() {
+  document.getElementById('game-area').style.display = 'none';
+  const complete = document.getElementById('game-complete');
+  complete.style.display = 'block';
+  document.getElementById('mascot-game-complete').innerHTML = quokkaSVG(100);
+
+  const total = state.gameQuestions.length;
+  const correct = state.gameCorrect;
+  const pct = Math.round(correct / total * 100);
+  document.getElementById('game-result-text').textContent =
+    `${total}문제 중 ${correct}개 정답! (${pct}%)`;
+
+  if (pct >= 80) launchConfetti();
+
+  // Save history
+  const record = {
+    date: new Date().toISOString(),
+    deckId: state.currentDeckId,
+    total,
+    correct,
+    pct,
+  };
+  state.gameHistory.push(record);
+  if (state.gameHistory.length > 50) state.gameHistory = state.gameHistory.slice(-50);
+  saveGameHistory();
+}
+
+// ── Admin ──
+
+function renderAdminDeckSelect() {
+  const sel = document.getElementById('admin-deck-select');
+  sel.innerHTML = '';
+  state.decks.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.id;
+    o.textContent = `${d.emoji} ${d.name}`;
+    sel.appendChild(o);
+  });
+}
+
+function renderAdminCardList() {
+  const deckId = document.getElementById('admin-deck-select').value;
+  const list = cardsForDeck(deckId);
+  const container = document.getElementById('admin-card-list');
+  const title = document.getElementById('admin-list-title');
+  title.textContent = `단어 목록 (${list.length}개)`;
+  container.innerHTML = '';
+
+  if (list.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-light);font-size:.9rem;padding:16px 0">이 덱에 단어가 없습니다.</p>';
+    return;
+  }
+
+  list.forEach(card => {
+    const el = document.createElement('div');
+    el.className = 'admin-card-item';
+    el.innerHTML = `
+      <div class="admin-card-text">
+        <div class="admin-card-english">${card.english}</div>
+        <div class="admin-card-korean">${card.koreanMeaning}${card.koreanExplanation ? ' — ' + card.koreanExplanation : ''}</div>
+      </div>
+      <button class="danger-btn" data-id="${card.id}">삭제</button>
+    `;
+    el.querySelector('.danger-btn').addEventListener('click', () => {
+      state.cards = state.cards.filter(c => c.id !== card.id);
+      delete state.cardStates[card.id];
+      saveCards();
+      saveStates();
+      renderAdminCardList();
+      showToast('단어가 삭제되었습니다.', 'info');
+    });
+    container.appendChild(el);
+  });
+}
+
+function handleAddWord(e) {
+  e.preventDefault();
+  const english = document.getElementById('input-english').value.trim();
+  const koreanMeaning = document.getElementById('input-korean-meaning').value.trim();
+  if (!english || !koreanMeaning) return showToast('영어와 한국어 뜻은 필수입니다.', 'error');
+
+  const card = {
+    id: uid(),
+    deckId: document.getElementById('admin-deck-select').value,
+    english,
+    koreanMeaning,
+    koreanExplanation: document.getElementById('input-korean-explanation').value.trim(),
+    example: document.getElementById('input-example').value.trim(),
+    exampleKorean: document.getElementById('input-example-korean').value.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  state.cards.push(card);
+  saveCards();
+  renderAdminCardList();
+  showToast(`"${english}" 추가 완료!`, 'success');
+  e.target.reset();
+}
+
+function handleCSVImport() {
+  const raw = document.getElementById('csv-input').value.trim();
+  if (!raw) return showToast('CSV 데이터를 입력하세요.', 'error');
+  const deckId = document.getElementById('admin-deck-select').value;
+  const lines = raw.split('\n').filter(l => l.trim());
+  let count = 0;
+
+  lines.forEach(line => {
+    if (line.toLowerCase().startsWith('english,')) return;
+    const parts = line.split(',').map(p => p.trim());
+    if (parts.length < 2 || !parts[0] || !parts[1]) return;
+    state.cards.push({
+      id: uid(),
+      deckId,
+      english: parts[0],
+      koreanMeaning: parts[1],
+      koreanExplanation: parts[2] || '',
+      example: parts[3] || '',
+      exampleKorean: parts[4] || '',
+      createdAt: new Date().toISOString(),
+    });
+    count++;
+  });
+
+  if (count === 0) return showToast('유효한 데이터가 없습니다.', 'error');
+  saveCards();
+  renderAdminCardList();
+  document.getElementById('csv-input').value = '';
+  showToast(`${count}개 단어가 등록되었습니다!`, 'success');
+}
+
+// ── Report ──
+
+function renderReport() {
+  // Child info
+  if (state.child) {
+    document.getElementById('report-child-name').textContent = `${state.child.name}의 학습 리포트`;
+    const levels = { beginner: '초급 (유아~초등 저학년)', elementary: '초등 (초등 고학년)', intermediate: '중급 (중학생 이상)' };
+    document.getElementById('report-child-level').textContent = `레벨: ${levels[state.child.level] || state.child.level}`;
+  }
+
+  // Summary
+  const totalCards = state.cards.length;
+  const memorized = state.cards.filter(c => isMemorized(c.id)).length;
+  const totalGames = state.gameHistory.length;
+  const avgPct = totalGames > 0 ? Math.round(state.gameHistory.reduce((s, g) => s + g.pct, 0) / totalGames) : 0;
+
+  const summaryEl = document.getElementById('report-summary');
+  summaryEl.innerHTML = `
+    <div class="add-word-form" style="padding:16px;margin:0;text-align:center">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--main-orange)">${totalCards}</div>
+      <div style="font-size:.8rem;color:var(--text-medium)">전체 단어</div>
+    </div>
+    <div class="add-word-form" style="padding:16px;margin:0;text-align:center">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--success)">${memorized}</div>
+      <div style="font-size:.8rem;color:var(--text-medium)">외운 단어</div>
+    </div>
+    <div class="add-word-form" style="padding:16px;margin:0;text-align:center">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--secondary-mint)">${totalGames}</div>
+      <div style="font-size:.8rem;color:var(--text-medium)">게임 횟수</div>
+    </div>
+    <div class="add-word-form" style="padding:16px;margin:0;text-align:center">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--secondary-sky)">${avgPct}%</div>
+      <div style="font-size:.8rem;color:var(--text-medium)">평균 정답률</div>
+    </div>
+  `;
+
+  // Per-deck
+  const decksEl = document.getElementById('report-decks');
+  decksEl.innerHTML = '';
+  state.decks.forEach(deck => {
+    const dc = cardsForDeck(deck.id);
+    const dm = dc.filter(c => isMemorized(c.id)).length;
+    const pct = dc.length > 0 ? Math.round(dm / dc.length * 100) : 0;
+    decksEl.innerHTML += `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0e6da">
+        <span style="font-size:1.4rem">${deck.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.9rem">${deck.name}</div>
+          <div class="deck-mini-bar" style="margin-top:4px"><div class="deck-mini-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+        <span style="font-size:.85rem;color:var(--text-medium)">${dm}/${dc.length} (${pct}%)</span>
+      </div>
+    `;
+  });
+
+  // Game history
+  const gamesEl = document.getElementById('report-games');
+  if (state.gameHistory.length === 0) {
+    gamesEl.innerHTML = '<p style="color:var(--text-light);font-size:.85rem;padding:8px 0">아직 게임 기록이 없습니다.</p>';
+  } else {
+    const recent = state.gameHistory.slice(-10).reverse();
+    gamesEl.innerHTML = recent.map(g => {
+      const deck = state.decks.find(d => d.id === g.deckId);
+      const d = new Date(g.date);
+      const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0e6da;font-size:.85rem">
+          <span>${deck ? deck.emoji : '📄'}</span>
+          <span style="flex:1">${g.correct}/${g.total} (${g.pct}%)</span>
+          <span style="color:var(--text-light)">${dateStr}</span>
+        </div>
+      `;
+    }).join('');
   }
 }
 
-function gradeCurrent(result) {
-  if (!difficultyReady) {
-    studyMessage.textContent = '학습 전에 난이도를 먼저 측정해 주세요.'
-    return
-  }
-  if (!currentCardId) {
-    studyMessage.textContent = '카드를 먼저 선택하세요.'
-    return
-  }
+// ── Child Info ──
 
-  request(`/api/cards/${currentCardId}/review`, {
-    method: 'POST',
-    body: JSON.stringify({ result }),
-  })
-    .then((r) => r.json())
-    .then((payload) => {
-      if (payload.error) throw new Error(payload.error)
-      renderStats()
-      loadCards()
-      setTimeout(() => loadNextCard(), 500)
-      studyMessage.textContent = `다음 복습 예정: ${new Date(payload.nextReviewAt).toLocaleString('ko-KR')}`
-    })
-    .catch((err) => {
-      studyMessage.textContent = `채점 실패: ${err.message || '오류'}`
-    })
+function handleChildInfo(e) {
+  e.preventDefault();
+  const name = document.getElementById('child-name').value.trim();
+  if (!name) return showToast('이름을 입력해주세요!', 'error');
+  const level = document.getElementById('child-level').value;
+  state.child = { name, level, createdAt: new Date().toISOString() };
+  saveChild();
+  showToast(`${name}아, 환영해!`, 'success');
+  showDeckScreen();
 }
 
-function handleSubmit(event) {
-  event.preventDefault()
-  const body = {
-    front: frontInput.value.trim(),
-    back: backInput.value.trim(),
-    topic: topicInput.value.trim(),
-  }
-  if (!body.front || !body.back || !body.topic) return
+// ── Keyboard ──
 
-  request('/api/cards', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-    .then((r) => r.json())
-    .then(() => {
-      frontInput.value = ''
-      backInput.value = ''
-      topicInput.value = ''
-      loadCards()
-      hydrateTopics()
-      renderStats()
-      loadAccount(accountId)
-    })
-}
+document.addEventListener('keydown', (e) => {
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
 
-function handleCardActions(event) {
-  if (shareMode) return
-  const target = event.target
-  if (target.tagName !== 'BUTTON') return
-  const id = target.dataset.id
-  if (!id) return
-
-  if (target.classList.contains('delete')) {
-    if (!confirm('정말 삭제하시겠습니까?')) return
-    request(`/api/cards/${id}`, { method: 'DELETE' }).then(() => {
-      loadCards()
-      hydrateTopics()
-      renderStats()
-      if (id === currentCardId) clearStudyCard()
-    })
-    return
-  }
-
-  if (target.classList.contains('edit')) {
-    const card = cards.find((item) => item.id === id)
-    if (!card) return
-    const front = prompt('앞면 수정', card.front)
-    const back = prompt('뒤면 수정', card.back)
-    const topic = prompt('주제 수정', card.topic)
-    if (front === null && back === null && topic === null) return
-
-    request(`/api/cards/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        front: front ?? card.front,
-        back: back ?? card.back,
-        topic: topic ?? card.topic,
-      }),
-    }).then(() => {
-      loadCards()
-      hydrateTopics()
-      renderStats()
-    })
-  }
-}
-
-function exportCards() {
-  request('/api/export')
-    .then((r) => r.json())
-    .then((list) => {
-      const blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${accountId}-quokka-flash-cards.json`
-      a.click()
-      URL.revokeObjectURL(url)
-    })
-}
-
-function importCards(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  const reader = new FileReader()
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(String(reader.result))
-      if (!Array.isArray(parsed)) throw new Error('JSON 배열이 아닙니다.')
-
-      request(
-        '/api/import',
-        {
-          method: 'POST',
-          body: JSON.stringify(parsed),
-        },
-      )
-        .then((r) => r.json())
-        .then((payload) => {
-          if (payload.error) throw new Error(payload.error)
-          loadAllData()
-          studyMessage.textContent = `${payload.imported}개 카드가 가져와졌습니다.`
-        })
-        .catch((error) => {
-          studyMessage.textContent = `가져오기 실패: ${error.message}`
-        })
-    } catch (error) {
-      studyMessage.textContent = `가져오기 실패: ${error.message}`
+  if (document.getElementById('screen-study').classList.contains('active')) {
+    switch (e.code) {
+      case 'Space': e.preventDefault(); flipCard(); break;
+      case 'ArrowRight': e.preventDefault(); nextCard(); break;
+      case 'ArrowLeft': e.preventDefault(); prevCard(); break;
     }
   }
-  reader.readAsText(file)
-}
+});
 
-async function loadAllData() {
-  if (!accountId) return
-  quizModeActive = false
-  quizCurrentCardId = null
-  if (quizQuestion) quizQuestion.textContent = '퀴즈 시작 버튼을 눌러주세요.'
-  if (quizScore) quizScore.textContent = '정답: 0 / 0'
-  if (quizMessage) quizMessage.textContent = '난이도 측정 후 시작할 수 있습니다.'
-  if (quizAnswerInput) quizAnswerInput.value = ''
-  if (quizChoiceWrap) {
-    quizChoiceWrap.classList.add('hidden')
-    quizChoiceWrap.innerHTML = ''
-  }
-  await hydrateTopics()
-  loadCards()
-  renderStats()
-  applyStudyGate()
-  renderShareControls()
-}
+// ── Init ──
 
-function getShareUrl() {
-  if (!accountId) return ''
-  const url = new URL(window.location.origin + window.location.pathname)
-  url.searchParams.set('shareAccount', accountId)
-  return url.toString()
-}
+function init() {
+  loadState();
 
-function renderShareControls() {
-  if (shareMode && shareModeInfo) {
-    shareModeInfo.textContent = '공유 모드: 조회/학습 기능만 사용 가능합니다.'
-  } else if (shareModeInfo) {
-    shareModeInfo.textContent = ''
-  }
-  if (shareLinkInput) {
-    shareLinkInput.value = getShareUrl()
-  }
-}
-
-async function copyShareLink() {
-  if (!shareLinkInput?.value) {
-    shareLinkInput.value = getShareUrl()
-  }
-  if (!shareLinkInput?.value) {
-    studyMessage.textContent = '공유할 대상 계정이 없습니다.'
-    return
+  // Decide initial screen
+  if (state.child) {
+    showDeckScreen();
+  } else {
+    showChildInfoScreen();
   }
 
-  try {
-    await navigator.clipboard.writeText(shareLinkInput.value)
-    studyMessage.textContent = '공유 링크가 클립보드에 복사되었습니다.'
-  } catch {
-    studyMessage.textContent = `복사할 수 없습니다. 링크: ${shareLinkInput.value}`
-  }
+  // Child info form
+  document.getElementById('child-info-form').addEventListener('submit', handleChildInfo);
+
+  // Deck screen
+  document.getElementById('goto-admin').addEventListener('click', showAdminScreen);
+  document.getElementById('goto-report').addEventListener('click', showReportScreen);
+
+  // Study screen
+  document.getElementById('back-to-decks').addEventListener('click', showDeckScreen);
+  document.getElementById('flashcard').addEventListener('click', flipCard);
+  document.getElementById('btn-prev').addEventListener('click', prevCard);
+  document.getElementById('btn-next').addEventListener('click', nextCard);
+  document.getElementById('btn-random').addEventListener('click', randomCard);
+  document.getElementById('btn-memorized').addEventListener('click', markMemorized);
+  document.getElementById('btn-unknown').addEventListener('click', markUnknown);
+  document.getElementById('goto-game').addEventListener('click', showGameScreen);
+
+  // Search & filter
+  document.getElementById('search-input').addEventListener('input', debounce(() => {
+    state.searchQuery = document.getElementById('search-input').value.trim();
+    state.studyIndex = 0;
+    applyFilters();
+  }, 200));
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.filterMode = btn.dataset.filter;
+      state.studyIndex = 0;
+      applyFilters();
+    });
+  });
+
+  // Game screen
+  document.getElementById('back-to-study').addEventListener('click', () => showStudyScreen(state.currentDeckId));
+  document.getElementById('game-retry').addEventListener('click', showGameScreen);
+  document.getElementById('game-to-report').addEventListener('click', showReportScreen);
+  document.getElementById('game-to-decks').addEventListener('click', showDeckScreen);
+
+  // Admin screen
+  document.getElementById('back-to-decks-admin').addEventListener('click', showDeckScreen);
+  document.getElementById('add-word-form').addEventListener('submit', handleAddWord);
+  document.getElementById('csv-import-btn').addEventListener('click', handleCSVImport);
+  document.getElementById('admin-deck-select').addEventListener('change', renderAdminCardList);
+
+  // Report screen
+  document.getElementById('back-to-decks-report').addEventListener('click', showDeckScreen);
 }
 
-form.addEventListener('submit', handleSubmit)
-clearBtn.addEventListener('click', () => {
-  frontInput.value = ''
-  backInput.value = ''
-  topicInput.value = ''
-})
-searchInput.addEventListener('input', loadCards)
-topicFilter.addEventListener('change', loadCards)
-cardList.addEventListener('click', handleCardActions)
-nextCardBtn.addEventListener('click', loadNextCard)
-revealBtn.addEventListener('click', revealAnswer)
-gradeButtons.forEach((button) => {
-  button.addEventListener('click', () => gradeCurrent(button.dataset.result))
-})
-exportBtn.addEventListener('click', exportCards)
-importInput.addEventListener('change', importCards)
-createAccountBtn.addEventListener('click', createAccount)
-setAccountBtn.addEventListener('click', setAccountFromInput)
-applyDifficultyBtn.addEventListener('click', applyDifficulty)
-if (createShareLinkBtn) {
-  createShareLinkBtn.addEventListener('click', () => {
-    renderShareControls()
-    if (shareLinkInput) {
-      shareLinkInput.focus()
-      shareLinkInput.select()
-    }
-  })
-}
-if (copyShareLinkBtn) {
-  copyShareLinkBtn.addEventListener('click', copyShareLink)
-}
-if (quizStartBtn) {
-  quizStartBtn.addEventListener('click', startQuiz)
-}
-if (quizSubmitBtn) {
-  quizSubmitBtn.addEventListener('click', submitTextAnswer)
-}
-if (quizNextBtn) {
-  quizNextBtn.addEventListener('click', nextQuizCard)
-}
-if (quizChoiceWrap) {
-  quizChoiceWrap.addEventListener('click', submitChoiceAnswerByEvent)
-}
-if (quizModeSelect) {
-  quizModeSelect.addEventListener('change', () => {
-    if (!quizModeActive || !quizCurrentCardId) return
-    const card = cards.find((item) => item.id === quizCurrentCardId)
-    if (card) renderQuizQuestion(card)
-  })
-}
-
-async function init() {
-  applyStudyGate()
-  renderConnectivityStatus()
-  setupServiceWorker()
-  window.addEventListener('online', () => {
-    renderConnectivityStatus()
-    setOfflineSafeDisabled()
-    loadAllData()
-  })
-  window.addEventListener('offline', () => {
-    renderConnectivityStatus()
-    setOfflineSafeDisabled()
-  })
-  const loaded = await ensureAccount()
-  if (!loaded) return
-  if (shareMode) {
-    setSharedModeState(true)
-  }
-  loadAllData()
-}
-
-function setupServiceWorker() {
-  if (!('serviceWorker' in navigator)) return
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .catch(() => {
-        if (connectivityStatus) {
-          connectivityStatus.textContent = '서비스워커 등록에 실패했습니다. 오프라인 모드가 제한될 수 있습니다.'
-          connectivityStatus.classList.add('is-offline')
-        }
-      })
-  })
-}
-
-init()
+init();

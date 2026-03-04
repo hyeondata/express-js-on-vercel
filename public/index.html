@@ -3,229 +3,215 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quokka Flash Pal</title>
-    <meta name="description" content="퀴카 플래시카드: 계정 분리, 난이도 기반 학습, 공유 링크, 퀴즈로 실시간 복습을 지원합니다." />
-    <meta property="og:title" content="Quokka Flash Pal" />
-    <meta property="og:description" content="계정별 카드 번들 분리와 난이도 게이팅으로 관리되는 플래시카드 플랫폼" />
+    <title>QuokkaWords - 쿼카와 함께하는 영단어</title>
+    <meta name="description" content="귀여운 쿼카와 함께 영어 단어를 재미있게 외우세요!" />
+    <meta property="og:title" content="QuokkaWords" />
+    <meta property="og:description" content="쿼카와 함께하는 영단어 학습" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/logo.png" />
-    <meta property="og:site_name" content="Quokka Flash Pal" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Quokka Flash Pal" />
-    <meta name="twitter:description" content="계정별 카드 번들 분리와 난이도 기반 학습, 공유 링크, 퀴즈를 지원합니다." />
-    <meta name="twitter:image" content="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark">QF</span>
-          <div>
-            <p class="brand-title">Quokka Flash Pal</p>
-            <p class="brand-subtitle">링크 기반 계정 분리 플래시카드 플랫폼</p>
+    <div id="app">
+      <!-- Toast -->
+      <div id="toast-container"></div>
+      <!-- Confetti -->
+      <canvas id="confetti-canvas"></canvas>
+
+      <!-- ===== SCREEN: Child Info ===== -->
+      <section id="screen-child-info" class="screen active">
+        <div class="deck-screen-inner">
+          <div class="mascot-area" id="mascot-main"></div>
+          <div class="speech-bubble" id="speech-child-info">반가워! 이름이 뭐야?</div>
+          <h1 class="deck-screen-title">아이 정보 입력</h1>
+          <form id="child-info-form" class="add-word-form" style="text-align:left">
+            <h3>우리 아이 정보</h3>
+            <input class="form-input" id="child-name" placeholder="이름 *" required />
+            <select class="form-select" id="child-level">
+              <option value="beginner">초급 (유아~초등 저학년)</option>
+              <option value="elementary" selected>초등 (초등 고학년)</option>
+              <option value="intermediate">중급 (중학생 이상)</option>
+            </select>
+            <button type="submit" class="primary-btn" style="width:100%;margin-top:8px">시작하기!</button>
+          </form>
+          <p style="margin-top:16px;font-size:.82rem;color:var(--text-light)">이미 사용한 적 있나요? 정보는 브라우저에 저장됩니다.</p>
+        </div>
+      </section>
+
+      <!-- ===== SCREEN: Deck Selection ===== -->
+      <section id="screen-deck" class="screen">
+        <div class="deck-screen-inner">
+          <div class="mascot-area" id="mascot-deck"></div>
+          <div class="speech-bubble" id="speech-deck">오늘도 한 단어씩!</div>
+          <h1 class="deck-screen-title" id="deck-greeting">어떤 덱을 공부할까?</h1>
+          <div class="deck-grid" id="deck-grid"></div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="secondary-btn" id="goto-admin">단어 관리</button>
+            <button class="secondary-btn" id="goto-report">부모 리포트</button>
           </div>
         </div>
-        <nav class="top-nav">
-          <a href="/">홈</a>
-          <a href="/about">소개</a>
-          <a href="/api-data">API 샘플</a>
-          <a href="/healthz">상태</a>
-        </nav>
-      </header>
+      </section>
 
-      <main class="workspace">
-        <section class="card preview-card">
-          <p class="section-kicker">링크 미리보기</p>
-          <h2>요약 카드</h2>
-          <p class="muted">
-            아래 형태로 공유 링크/메신저 미리보기에서 바로 노출되도록 구성했고,
-            실제 OG/Twitter 카드 메타도 적용했습니다.
-          </p>
-          <div class="inline">
-            <img src="/logo.png" alt="Quokka Flash Pal" class="preview-logo" />
-            <div>
-              <p class="preview-title">Quokka Flash Pal</p>
-              <p class="muted">계정 분리 · 난이도 학습 · 공유 모드 지원 플래시카드</p>
+      <!-- ===== SCREEN: Flashcard Study (캐릭터 수업) ===== -->
+      <section id="screen-study" class="screen">
+        <div class="study-screen-inner">
+          <header class="study-header">
+            <button id="back-to-decks" class="icon-btn">← 덱 목록</button>
+            <span id="deck-title" class="deck-label"></span>
+            <div class="streak-counter" id="streak-counter">🔥 0</div>
+          </header>
+
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+          <span class="progress-text" id="progress-text">0 / 0</span>
+
+          <div class="filter-row">
+            <input type="text" class="search-input" id="search-input" placeholder="검색 (영어/한국어)..." />
+            <div class="filter-toggles">
+              <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="unknown">모르는 단어</button>
+              <button class="filter-btn" data-filter="memorized">외운 단어</button>
             </div>
           </div>
-          <div class="preview-pill-wrap">
-            <span class="pill small">공유 링크</span>
-            <span class="pill small">난이도 게이팅</span>
-            <span class="pill small">퀴즈 모드</span>
+
+          <div class="flashcard-container">
+            <div class="flashcard" id="flashcard">
+              <div class="flashcard-inner" id="flashcard-inner">
+                <div class="flashcard-front">
+                  <p class="card-english" id="card-english"></p>
+                  <p class="card-tap-hint">탭하거나 Space를 누르세요 🇰🇷</p>
+                </div>
+                <div class="flashcard-back">
+                  <p class="card-korean-meaning" id="card-korean-meaning"></p>
+                  <p class="card-korean-explanation" id="card-korean-explanation"></p>
+                  <p class="card-example" id="card-example"></p>
+                  <p class="card-example-korean" id="card-example-korean"></p>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
 
-        <section class="hero card">
-          <div class="status-strip">
-            <p id="connectivity-status" class="pill warning">현재 네트워크 상태를 확인 중입니다.</p>
-            <p id="account-info" class="muted">현재 계정: 게스트</p>
+          <div class="quokka-reaction" id="quokka-reaction">
+            <span id="reaction-mascot"></span>
+            <span class="reaction-bubble" id="reaction-bubble"></span>
           </div>
-          <h1>초고속 복습 환경으로 카드 학습을 디자인하다</h1>
-          <p class="muted">
-            계정별 분리된 카드 뭉치, 난이도 기반 적응형 복습, 공유 링크, 오프라인 대응까지 한 화면에서 처리합니다.
-          </p>
-        </section>
 
-        <section class="grid two-col">
-          <section class="card">
-            <div class="section-kicker">계정 & 난이도</div>
-            <h2>계정 관리</h2>
-            <div class="small-grid">
-              <input id="new-account-name" placeholder="새 계정 이름" />
-              <button id="create-account">새 계정 만들기</button>
-            </div>
-            <div class="small-grid" style="margin-top:.55rem;">
-              <select id="account-select"></select>
-              <button id="set-account" class="secondary">계정 선택</button>
-            </div>
-            <p id="difficulty-ready-banner" class="pill warning">난이도 미측정 계정은 학습이 제한됩니다.</p>
-            <p class="muted">난이도는 초기 5문항의 정답률 기준으로 1~5로 자동 계산합니다.</p>
+          <div class="study-actions">
+            <button id="btn-prev" class="nav-btn">◀ 이전</button>
+            <button id="btn-random" class="nav-btn">🎲 랜덤</button>
+            <button id="btn-next" class="nav-btn">다음 ▶</button>
+          </div>
+          <div class="memorize-actions">
+            <button id="btn-unknown" class="action-btn unknown-btn">모르겠어 😅</button>
+            <button id="btn-memorized" class="action-btn memorized-btn">외웠어! 🎉</button>
+          </div>
+          <div style="text-align:center;margin-top:16px">
+            <button id="goto-game" class="primary-btn">게임 학습으로 →</button>
+          </div>
+        </div>
+      </section>
 
-            <div class="inline" style="margin-top:.45rem;">
-              <input id="difficulty-correct" type="number" min="0" step="1" value="5" />
-              <span class="muted">/</span>
-              <input id="difficulty-total" type="number" min="1" step="1" value="5" />
-              <button id="apply-difficulty" class="secondary">초기 난이도 측정</button>
-            </div>
-            <p id="difficulty-info" class="muted">현재 계정 난이도 설정이 반영됩니다.</p>
+      <!-- ===== SCREEN: Game (게임 학습) ===== -->
+      <section id="screen-game" class="screen">
+        <div class="study-screen-inner">
+          <header class="study-header">
+            <button id="back-to-study" class="icon-btn">← 수업으로</button>
+            <span class="deck-label" id="game-deck-title">게임 학습</span>
+            <div class="streak-counter" id="game-score">0 / 0</div>
+          </header>
 
-            <div class="share-stack">
-              <div class="inline share-row">
-                <button id="create-share-link" class="secondary">공유 링크 생성</button>
-                <input id="share-link" readonly />
-                <button id="copy-share-link" class="secondary">복사</button>
-              </div>
-              <p id="share-mode-info" class="muted">공유 링크로 읽기 전용 학습 모드 화면을 넘겨드릴 수 있습니다.</p>
-            </div>
-          </section>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="game-progress-bar"></div>
+          </div>
+          <span class="progress-text" id="game-progress-text">0 / 0</span>
 
-          <section class="card">
-            <div class="section-kicker">학습 통계</div>
-            <h2>대시보드</h2>
-            <div class="stats" id="stats"></div>
-            <div id="study-message" class="hint">난이도 측정/카드가 준비되면 자동 복습 모드가 켜집니다.</div>
-          </section>
-        </section>
+          <div id="game-area" style="min-height:300px">
+            <!-- Quiz content rendered by JS -->
+          </div>
 
-        <section class="grid">
-          <section class="card">
-            <div class="section-kicker">카드 생성</div>
-            <h2>새 카드 만들기</h2>
-            <form id="card-form">
-              <label>
-                앞면
-                <input id="front" required placeholder="예: 안녕하세요" />
-              </label>
-              <label>
-                뒤집기
-                <input id="back" required placeholder="예: Hello" />
-              </label>
-              <label>
-                주제
-                <input id="topic" required placeholder="예: 인사" />
-              </label>
-              <div class="inline">
-                <button type="submit">카드 추가</button>
-                <button id="clear" type="button" class="secondary">초기화</button>
-              </div>
-            </form>
-          </section>
+          <div class="quokka-reaction" id="game-reaction">
+            <span id="game-reaction-mascot"></span>
+            <span class="reaction-bubble" id="game-reaction-bubble"></span>
+          </div>
 
-          <section class="card">
-            <div class="section-kicker">복습 학습</div>
-            <h2>학습 모드</h2>
-            <p class="muted">복습 우선순위(기한·난이도) 기반으로 다음 카드를 노출합니다.</p>
-            <div class="study-area">
-              <div class="pill">
-                <strong id="flashTopic" class="muted">주제: -</strong>
-              </div>
-              <div id="flashText" class="answer-hidden">학습 시작 버튼을 눌러보세요.</div>
-              <div id="flashAnswer" class="hidden answer-hidden"></div>
-              <div class="inline" style="margin-top:.8rem;">
-                <button id="next-card">다음 카드</button>
-                <button id="reveal" class="secondary">정답 보기</button>
-              </div>
-              <div class="grade-row">
-                <button class="danger" data-result="again">못 외웠음</button>
-                <button class="secondary" data-result="hard">어려움</button>
-                <button data-result="good">잘 외웠음</button>
-              </div>
+          <div id="game-complete" style="display:none;text-align:center;padding:40px 20px">
+            <div class="mascot-area" id="mascot-game-complete"></div>
+            <h2 style="margin:16px 0 8px">게임 완료!</h2>
+            <p id="game-result-text" style="font-size:1.1rem;margin-bottom:20px"></p>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+              <button id="game-retry" class="primary-btn">다시 하기</button>
+              <button id="game-to-report" class="secondary-btn">부모 리포트</button>
+              <button id="game-to-decks" class="secondary-btn">덱 목록</button>
             </div>
-          </section>
+          </div>
+        </div>
+      </section>
 
-          <section class="card">
-            <div class="section-kicker">퀴즈 연습</div>
-            <h2>퀴즈 모드</h2>
-            <p class="muted">앞면(힌트) 기반 퀴즈로 즉시 회상 훈련을 진행합니다.</p>
-            <div class="inline" style="margin-top:.4rem;">
-              <label for="quiz-mode" class="muted">문제 타입</label>
-              <select id="quiz-mode">
-                <option value="text">주관식</option>
-                <option value="choice">객관식</option>
-              </select>
-              <button id="start-quiz" class="secondary">퀴즈 시작</button>
-            </div>
-            <div class="quiz-box">
-              <strong id="quiz-question" class="muted">퀴즈 시작 버튼을 눌러주세요.</strong>
-              <p id="quiz-score" class="muted">정답: 0 / 0</p>
-            </div>
-            <div id="quiz-choice-wrap" class="quiz-choices hidden"></div>
-            <div class="inline" style="margin-top:.55rem;">
-              <input id="quiz-answer" placeholder="정답을 입력하세요" />
-              <button id="submit-quiz-answer" class="secondary" type="button">제출</button>
-            </div>
-            <button id="next-quiz-question" class="secondary">다음 문제</button>
-            <p id="quiz-message" class="muted hint">난이도 측정 후 시작할 수 있습니다.</p>
-          </section>
-        </section>
+      <!-- ===== SCREEN: Parent Report (부모 리포트) ===== -->
+      <section id="screen-report" class="screen">
+        <div class="study-screen-inner">
+          <header class="admin-header">
+            <button id="back-to-decks-report" class="icon-btn">← 덱 목록</button>
+            <h2>부모 리포트</h2>
+          </header>
 
-        <section class="grid two-col">
-          <section class="card">
-            <div class="section-kicker">카드 목록</div>
-            <h2>카드 목록</h2>
-            <div class="small-grid">
-              <input id="search" placeholder="검색 (앞면/뒷면/주제)" />
-              <select id="topic-filter">
-                <option value="">전체 주제</option>
-              </select>
-            </div>
-            <ul id="card-list" class="card-list"></ul>
-          </section>
+          <div class="add-word-form" id="report-child-info">
+            <h3 id="report-child-name">아이 이름</h3>
+            <p id="report-child-level" style="font-size:.85rem;color:var(--text-medium)"></p>
+          </div>
 
-          <section class="card">
-            <div class="section-kicker">데이터</div>
-            <h2>데이터 관리</h2>
-            <div class="inline">
-              <button id="export">내보내기(JSON)</button>
-              <input id="import-file" type="file" accept="application/json" />
-            </div>
-            <p id="import-hint" class="muted">현재 선택한 계정 카드만 저장/복원합니다.</p>
-            <div class="kpi">
-              <div class="mini-kpi">
-                <span>난이도 미측정 계정은</span>
-                <strong>학습 제한</strong>
-              </div>
-              <div class="mini-kpi">
-                <span>공유 링크로</span>
-                <strong>계정 분리 공유</strong>
-              </div>
-              <div class="mini-kpi">
-                <span>실시간 동기화 +</span>
-                <strong>오프라인 폴백</strong>
-              </div>
-            </div>
-          </section>
-        </section>
-      </main>
+          <div class="add-word-form" style="margin-top:16px">
+            <h3>전체 학습 현황</h3>
+            <div id="report-summary" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px"></div>
+          </div>
 
-      <p class="footer">기획 의도: 링크 기반 계정 분리, 난이도 게이팅, 공유/퀴즈를 실험한 플래시카드 서비스</p>
+          <div class="add-word-form" style="margin-top:16px">
+            <h3>덱별 현황</h3>
+            <div id="report-decks"></div>
+          </div>
+
+          <div class="add-word-form" style="margin-top:16px">
+            <h3>최근 게임 기록</h3>
+            <div id="report-games"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SCREEN: Admin ===== -->
+      <section id="screen-admin" class="screen">
+        <div class="admin-screen-inner">
+          <header class="admin-header">
+            <button id="back-to-decks-admin" class="icon-btn">← 덱 목록</button>
+            <h2>단어 관리</h2>
+          </header>
+
+          <form id="add-word-form" class="add-word-form">
+            <h3>단어 추가</h3>
+            <select class="form-select" id="admin-deck-select"></select>
+            <input class="form-input" id="input-english" placeholder="English *" required />
+            <input class="form-input" id="input-korean-meaning" placeholder="한국어 뜻 *" required />
+            <input class="form-input" id="input-korean-explanation" placeholder="한국어 설명 (선택)" />
+            <input class="form-input" id="input-example" placeholder="예문 영어 (선택)" />
+            <input class="form-input" id="input-example-korean" placeholder="예문 한국어 (선택)" />
+            <button type="submit" class="primary-btn" style="width:100%">단어 추가</button>
+          </form>
+
+          <div class="csv-section">
+            <h3>CSV 일괄 등록</h3>
+            <p style="font-size:.8rem;color:var(--text-light);margin-bottom:8px">형식: english,koreanMeaning</p>
+            <textarea class="form-textarea" id="csv-input" placeholder="abandon,버리다&#10;abundant,풍부한&#10;..."></textarea>
+            <button id="csv-import-btn" class="secondary-btn" style="width:100%;margin-top:10px">CSV 가져오기</button>
+          </div>
+
+          <div class="admin-card-list-section">
+            <h3 class="admin-card-list-title" id="admin-list-title">단어 목록</h3>
+            <div id="admin-card-list"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <script src="/app.js" defer></script>
