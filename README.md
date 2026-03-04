@@ -10,13 +10,13 @@ You can choose from one of the following two methods to use this repository:
 
 Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/vercel/examples/tree/main/solutions/express&project-name=express&repository-name=express)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https://github.com/hyeondata/express-js-on-vercel&project-name=express-js-on-vercel&repository-name=express-js-on-vercel)
 
 ### Clone and Deploy
 
 ```bash
-git clone https://github.com/vercel/examples.git
-cd examples/solutions/express
+git clone https://github.com/hyeondata/express-js-on-vercel.git
+cd express-js-on-vercel
 ```
 
 Install the Vercel CLI:
