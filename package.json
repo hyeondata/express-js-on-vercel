@@ -12,5 +12,13 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types scripts/run-local.mjs",
+    "mcp:flashcard": "node scripts/mcp-flashcard-server.mjs",
+    "debug:flashcard": "node scripts/debug-flashcard.mjs",
+    "debug:flashcard:mcp": "node scripts/debug-flashcard.mjs mcp",
+    "openclaw:register": "node scripts/openclaw-register.mjs",
+    "dev:local": "node --experimental-strip-types scripts/run-local.mjs"
   }
 }

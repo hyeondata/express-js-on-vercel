@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "flashcard-local": {
+      "command": "node",
+      "args": [
+        "<PROJECT_PATH>/scripts/mcp-flashcard-server.mjs"
+      ],
+      "env": {
+        "FLASHCARD_BASE_URL": "http://localhost:3000",
+        "FLASHCARD_ACCOUNT_ID": "guest"
+      }
+    }
+  }
+}
