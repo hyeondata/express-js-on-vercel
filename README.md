@@ -87,3 +87,5 @@ npm run deploy:check
 ```
 
 `deploy:check`는 health/accounts/cards/study/share 모드 기본 동작을 순차로 검증합니다.
+
+GitHub에 푸시하면 `Deploy Preflight` 워크플로우가 동일하게 `deploy:check`를 실행해 배포 전 실패 지점을 빠르게 확인합니다.

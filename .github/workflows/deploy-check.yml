@@ -1,0 +1,47 @@
+name: Deploy Preflight
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  preflight:
+    name: Run deploy check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start server
+        run: |
+          nohup npm run start > /tmp/flash-server.log 2>&1 &
+          echo $! > /tmp/flash-server.pid
+          sleep 2
+
+      - name: Run deploy preflight check
+        env:
+          BASE_URL: http://127.0.0.1:3000
+        run: |
+          npm run deploy:check
+
+      - name: Stop local server
+        if: always()
+        run: kill -9 $(cat /tmp/flash-server.pid) || true
+
+      - name: Show server log on failure
+        if: failure()
+        run: |
+          cat /tmp/flash-server.log
