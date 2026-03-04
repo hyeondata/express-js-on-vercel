@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Quokka Flash Pal</title>
+    <meta name="description" content="퀴카 플래시카드: 계정 분리, 난이도 기반 학습, 공유 링크, 퀴즈로 실시간 복습을 지원합니다." />
+    <meta property="og:title" content="Quokka Flash Pal" />
+    <meta property="og:description" content="계정별 카드 번들 분리와 난이도 게이팅으로 관리되는 플래시카드 플랫폼" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png" />
+    <meta property="og:site_name" content="Quokka Flash Pal" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Quokka Flash Pal" />
+    <meta name="twitter:description" content="계정별 카드 번들 분리와 난이도 기반 학습, 공유 링크, 퀴즈를 지원합니다." />
+    <meta name="twitter:image" content="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -31,6 +41,27 @@
       </header>
 
       <main class="workspace">
+        <section class="card preview-card">
+          <p class="section-kicker">링크 미리보기</p>
+          <h2>요약 카드</h2>
+          <p class="muted">
+            아래 형태로 공유 링크/메신저 미리보기에서 바로 노출되도록 구성했고,
+            실제 OG/Twitter 카드 메타도 적용했습니다.
+          </p>
+          <div class="inline">
+            <img src="/logo.png" alt="Quokka Flash Pal" class="preview-logo" />
+            <div>
+              <p class="preview-title">Quokka Flash Pal</p>
+              <p class="muted">계정 분리 · 난이도 학습 · 공유 모드 지원 플래시카드</p>
+            </div>
+          </div>
+          <div class="preview-pill-wrap">
+            <span class="pill small">공유 링크</span>
+            <span class="pill small">난이도 게이팅</span>
+            <span class="pill small">퀴즈 모드</span>
+          </div>
+        </section>
+
         <section class="hero card">
           <div class="status-strip">
             <p id="connectivity-status" class="pill warning">현재 네트워크 상태를 확인 중입니다.</p>

@@ -174,6 +174,40 @@ body {
   border: 1px dashed rgba(56, 189, 248, 0.35);
 }
 
+.preview-card {
+  background: linear-gradient(130deg, rgba(12, 10, 33, 0.95), rgba(10, 48, 96, 0.86));
+}
+
+.preview-card img.preview-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  background: #fff;
+  padding: 2px;
+}
+
+.preview-title {
+  margin: 0;
+  margin-bottom: 0.2rem;
+  font-weight: 700;
+}
+
+.preview-pill-wrap {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.pill.small {
+  display: inline-flex;
+  padding: 0.35rem 0.56rem;
+  font-size: 0.82rem;
+  border-color: rgba(129, 140, 248, 0.5);
+}
+
 .hero h1 {
   margin: 0.72rem 0 0.45rem;
   font-size: clamp(1.45rem, 3.2vw, 2.05rem);
