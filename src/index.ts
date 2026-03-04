@@ -179,6 +179,17 @@ function getAccountId(req: express.Request) {
   return (headerValue || queryValue || defaultAccountId).trim() || defaultAccountId
 }
 
+function isShareMode(req: express.Request) {
+  const headerValue = req.header('x-share-mode')
+  return headerValue === '1' || headerValue === 'true'
+}
+
+function rejectShareWrite(req: express.Request, res: express.Response) {
+  if (!isShareMode(req)) return false
+  res.status(403).json({ error: '공유 모드에서는 쓰기 작업이 제한됩니다.' })
+  return true
+}
+
 function cardsForAccount(accountId: string) {
   return cards.filter((item) => item.accountId === accountId)
 }
@@ -327,6 +338,7 @@ app.get('/healthz', (_req, res) => {
 })
 
 app.post('/api/accounts', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const name =
     typeof req.body?.name === 'string' && req.body.name.trim()
       ? req.body.name.trim()
@@ -359,6 +371,7 @@ app.get('/api/accounts/:accountId', (req, res) => {
 })
 
 app.post('/api/accounts/:accountId/difficulty', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const account = accounts.get(req.params.accountId)
   if (!account) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })
 
@@ -427,6 +440,7 @@ app.get('/api/cards/:id', (req, res) => {
 })
 
 app.post('/api/cards', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const accountId = getAccountId(req)
   const account = accounts.get(accountId)
   if (!account) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })
@@ -460,6 +474,7 @@ app.post('/api/cards', (req, res) => {
 })
 
 app.patch('/api/cards/:id', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const accountId = getAccountId(req)
   const account = accounts.get(accountId)
   if (!account) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })
@@ -476,6 +491,7 @@ app.patch('/api/cards/:id', (req, res) => {
 })
 
 app.delete('/api/cards/:id', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const accountId = getAccountId(req)
   const account = accounts.get(accountId)
   if (!account) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })
@@ -561,6 +577,7 @@ app.post('/api/cards/:id/review', (req, res) => {
 })
 
 app.post('/api/import', (req, res) => {
+  if (rejectShareWrite(req, res)) return
   const accountId = getAccountId(req)
   const account = accounts.get(accountId)
   if (!account) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })

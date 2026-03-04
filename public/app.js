@@ -67,6 +67,9 @@ function request(path, options = {}, includeAccount = true) {
   if (includeAccount && accountId) {
     headers.set('X-Account-Id', accountId)
   }
+  if (shareMode) {
+    headers.set('X-Share-Mode', '1')
+  }
   return fetch(path, { ...options, headers })
 }
 
