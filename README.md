@@ -41,3 +41,35 @@ vercel dev
 - MCP 서버 실행: `npm run mcp:flashcard`
 - OpenClaw 등록 자동 반영: `npm run openclaw:register`
 - 로컬 실행: `npm run start` (동일: `npm run dev:local`)
+
+### Vercel 배포 디버깅
+
+배포 실패 시 아래 순서로 점검하세요.
+
+1) 인증/토큰 상태 확인
+
+```bash
+vercel login
+```
+
+로그인 후 `vercel link` 또는 새 배포를 진행하세요.  
+`The specified token is not valid` 메시지는 토큰/세션 만료가 원인인 경우가 많습니다.
+
+2) 로컬에서 앱이 정상 실행되는지 확인
+
+```bash
+npm run start
+```
+
+`http://localhost:3000/healthz`가 200 응답인지, `/api/accounts`가 JSON을 반환하는지 확인하세요.
+
+3) Vercel 빌드/라우팅 설정 확인
+
+- `vercel.json`의 `builds`가 `src/index.ts`를 가리키는지
+- `routes`가 요청을 `src/index.ts`로 전달하는지
+- 변경 후 `vercel deploy` 재시도
+
+4) 자주 보이는 실패 메시지 체크
+- `Cannot find module .../src/index.ts`: 빌드 루트/경로 불일치
+- `EACCES`/권한 오류: 런타임 저장 경로(`/tmp`) 사용 여부 점검
+- `Function crashed`/`Unhandled`: `npm run start`로 동일 요청을 재현해 오류 로그 확인
