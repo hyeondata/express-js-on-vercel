@@ -54,7 +54,11 @@ const app = express()
 app.use(express.json())
 app.use(express.static(resolveProjectPath('public')))
 
-const dataDir = resolveProjectPath('data')
+const dataDir = process.env.FLASHCARD_DATA_DIR
+  ? path.resolve(process.env.FLASHCARD_DATA_DIR)
+  : process.env.VERCEL
+    ? '/tmp/flash-data'
+    : resolveProjectPath('data')
 const storePath = path.join(dataDir, 'store.json')
 
 const defaultAccountId = 'guest'
@@ -180,8 +184,10 @@ function getAccountId(req: express.Request) {
 }
 
 function isShareMode(req: express.Request) {
-  const headerValue = req.header('x-share-mode')
-  return headerValue === '1' || headerValue === 'true'
+  const headerValue = req.get('x-share-mode')
+  if (!headerValue) return false
+  const normalized = String(headerValue).trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes'
 }
 
 function rejectShareWrite(req: express.Request, res: express.Response) {
