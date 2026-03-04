@@ -12,6 +12,7 @@ const configPath = path.join(openclawDir, 'openclaw.json')
 const managedSkillsDir = path.join(openclawDir, 'skills')
 const managedSkillDir = path.join(managedSkillsDir, skillName)
 const baseUrl = process.env.FLASHCARD_BASE_URL || 'http://localhost:3000'
+const accountId = process.env.FLASHCARD_ACCOUNT_ID || ''
 
 function printSection(title) {
   process.stdout.write(`\n=== ${title} ===\n`)
@@ -100,6 +101,7 @@ async function syncOpenClawConfig() {
       env: {
         ...(normalizeStringMap(currentEntry.env)),
         FLASHCARD_BASE_URL: baseUrl,
+        ...(accountId ? { FLASHCARD_ACCOUNT_ID: accountId } : {}),
       },
       config: {
         ...(normalizeStringMap(currentEntry.config)),
